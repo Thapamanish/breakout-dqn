@@ -13,8 +13,8 @@ EVAL_SEED = 11037
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--video_folder', default='test_videos')
-parser.add_argument('--episode_index', type=int, default=1,
-                    help='1-based five-life evaluation episode to record')
+parser.add_argument('--episode_index', type=int, default=0,
+                    help='1-based episode to record; 0 automatically selects the best')
 parser = add_arguments(parser)
 args = parser.parse_args()
 args.test_dqn = True
@@ -26,9 +26,7 @@ env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True,
 agent = Agent_DQN(env, args)
 env.reset(seed=EVAL_SEED)
 
-total_reward = 0.0
 video_path = os.path.join(args.video_folder, 'breakout_combined.mp4')
-writer = imageio.get_writer(video_path, fps=30, macro_block_size=1)
 
 def play_one_game(record=False):
     total = 0.0
@@ -52,12 +50,28 @@ def play_one_game(record=False):
                 frames.append(env.env.render())
     return total, frames
 
+# With episode_index=0, evaluate first and choose the actual best episode.
+if args.episode_index <= 0:
+    scores = []
+    env.reset(seed=EVAL_SEED)
+    for _ in range(args.eval_episodes):
+        score, _ = play_one_game(record=False)
+        scores.append(score)
+    best_offset = max(range(len(scores)), key=scores.__getitem__)
+    args.episode_index = best_offset + 1
+    print(f'Best episode selected dynamically: {args.episode_index} '
+          f'with score {scores[best_offset]}')
+    env.reset(seed=EVAL_SEED)
+else:
+    env.reset(seed=EVAL_SEED)
+
 # Replay earlier five-life games without recording so the requested game is
 # aligned with the same deterministic evaluation sequence.
 for _ in range(max(0, args.episode_index - 1)):
     play_one_game(record=False)
 
 total_reward, frames = play_one_game(record=True)
+writer = imageio.get_writer(video_path, fps=30, macro_block_size=1)
 for frame in frames:
     writer.append_data(frame)
 
