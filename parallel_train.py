@@ -62,6 +62,42 @@ class PrioritizedReplayBuffer:
         self.priorities[np.asarray(indices)] = np.maximum(np.asarray(priorities), 1e-6)
 
 
+class NStepAccumulator:
+    """Turn one environment's one-step transitions into n-step samples."""
+
+    def __init__(self, n_step, gamma):
+        self.n_step = int(n_step)
+        self.gamma = float(gamma)
+        self.transitions = deque()
+
+    def _build_sample(self):
+        state, action, _, _, _ = self.transitions[0]
+        total_reward = 0.0
+        next_state = None
+        done = False
+        steps = 0
+        for _, _, reward, candidate_next_state, candidate_done in self.transitions:
+            total_reward += (self.gamma ** steps) * reward
+            next_state = candidate_next_state
+            steps += 1
+            done = candidate_done
+            if done or steps == self.n_step:
+                break
+        return state, action, total_reward, next_state, done, steps
+
+    def append(self, state, action, reward, next_state, done):
+        self.transitions.append((state, action, reward, next_state, done))
+        samples = []
+        if len(self.transitions) >= self.n_step:
+            samples.append(self._build_sample())
+            self.transitions.popleft()
+        if done:
+            while self.transitions:
+                samples.append(self._build_sample())
+                self.transitions.popleft()
+        return samples
+
+
 def parse_args():
     p = argparse.ArgumentParser()
     # Keep the default below the JupyterHub stability limit. More workers can
@@ -70,8 +106,9 @@ def parse_args():
     p.add_argument('--gpu_count', type=int, default=1,
                    help='Number of visible GPUs to use (default: 1)')
     p.add_argument('--max_steps', type=int, default=5_000_000)
-    p.add_argument('--resume', default='dqn_model_baseline_345.pth')
-    p.add_argument('--output', default='parallel_5m.pth')
+    p.add_argument('--resume', default='',
+                   help='Optional checkpoint to continue; omit for a clean run')
+    p.add_argument('--output', default='dqn_3step_5m.pth')
     p.add_argument('--batch_size', type=int, default=64)
     p.add_argument('--replay_capacity', type=int, default=100_000)
     p.add_argument('--learning_starts', type=int, default=20_000)
@@ -79,6 +116,8 @@ def parse_args():
     p.add_argument('--target_update_frequency', type=int, default=2_500)
     p.add_argument('--learning_rate', type=float, default=6.25e-5)
     p.add_argument('--gamma', type=float, default=0.99)
+    p.add_argument('--n_step', type=int, default=3,
+                   help='Number of discounted rewards per replay target')
     p.add_argument('--epsilon_decay_steps', type=int, default=1_000_000)
     p.add_argument('--prioritized_replay', action='store_true',
                    help='Use proportional prioritized experience replay')
@@ -108,15 +147,21 @@ def save(path, online, target, optimizer, steps, gradients, args):
 
 def main():
     args = parse_args()
+    if args.n_step < 1:
+        raise ValueError('--n_step must be at least 1')
     random.seed(595); np.random.seed(595); torch.manual_seed(595)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     visible_gpu_count = torch.cuda.device_count() if device.type == 'cuda' else 0
     gpu_count = min(args.gpu_count, visible_gpu_count)
     print(f'Using device: {device}; visible CUDA devices: {visible_gpu_count}; '
-          f'using GPUs: {gpu_count}; workers: {args.workers}')
+          f'using GPUs: {gpu_count}; workers: {args.workers}; '
+          f'n-step: {args.n_step}')
 
     online = DQN(4, 4).to(device)
     target = DQN(4, 4).to(device)
+    # A clean run starts with identical online and target networks.  A resume
+    # below then restores its saved target network when one is available.
+    target.load_state_dict(online.state_dict())
     steps = gradients = 0
     if args.resume and os.path.exists(args.resume):
         c = torch.load(args.resume, map_location=device)
@@ -138,6 +183,8 @@ def main():
 
     memory = (PrioritizedReplayBuffer(args.replay_capacity, args.per_alpha)
               if args.prioritized_replay else deque(maxlen=args.replay_capacity))
+    n_step_accumulators = [NStepAccumulator(args.n_step, args.gamma)
+                           for _ in range(args.workers)]
     env = gym.vector.AsyncVectorEnv([make_env for _ in range(args.workers)],
                                     shared_memory=False)
     states, _ = env.reset(seed=595)
@@ -150,10 +197,19 @@ def main():
             greedy = q.argmax(1).detach().cpu().numpy()
         actions = np.where(np.random.random(args.workers) < epsilon,
                            np.random.randint(0, 4, args.workers), greedy)
-        next_states, rewards, terminated, truncated, _ = env.step(actions)
+        next_states, rewards, terminated, truncated, infos = env.step(actions)
         for i in range(args.workers):
-            memory.append((states[i].copy(), int(actions[i]), float(rewards[i]),
-                           next_states[i].copy(), bool(terminated[i] or truncated[i])))
+            done = bool(terminated[i] or truncated[i])
+            # Vector environments auto-reset completed slots.  The final
+            # observation is the true successor for a terminal replay sample.
+            successor = next_states[i]
+            if done and infos.get('_final_observation', np.zeros(args.workers, dtype=bool))[i]:
+                successor = infos['final_observation'][i]
+            samples = n_step_accumulators[i].append(
+                states[i].copy(), int(actions[i]), float(rewards[i]),
+                np.asarray(successor).copy(), done)
+            for sample in samples:
+                memory.append(sample)
         states = next_states
         steps += args.workers
 
@@ -165,17 +221,19 @@ def main():
                     batch, sample_indices, sample_weights = memory.sample(args.batch_size, beta)
                 else:
                     batch = random.sample(memory, args.batch_size)
-                s, a, r, ns, d = zip(*batch)
+                s, a, r, ns, d, horizons = zip(*batch)
                 s = state_batch(np.stack(s), device)
                 ns = state_batch(np.stack(ns), device)
                 a = torch.as_tensor(a, dtype=torch.long, device=device).unsqueeze(1)
                 r = torch.as_tensor(r, dtype=torch.float32, device=device)
                 d = torch.as_tensor(d, dtype=torch.float32, device=device)
+                horizons = torch.as_tensor(horizons, dtype=torch.float32, device=device)
                 current = online(s).gather(1, a).squeeze(1)
                 with torch.no_grad():
                     na = online(ns).argmax(1, keepdim=True)
                     nq = target(ns).gather(1, na).squeeze(1)
-                    expected = r + args.gamma * nq * (1.0 - d)
+                    discounts = torch.pow(torch.full_like(horizons, args.gamma), horizons)
+                    expected = r + discounts * nq * (1.0 - d)
                 td_errors = current - expected
                 if args.prioritized_replay:
                     weights = torch.as_tensor(sample_weights, dtype=torch.float32, device=device)

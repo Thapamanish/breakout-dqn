@@ -44,11 +44,15 @@ python3 main.py --test_dqn --model_path dqn_model.pth --record_video
 python3 parallel_train.py \
   --workers 2 \
   --gpu_count 1 \
-  --resume dqn_model_baseline_345.pth \
-  --output parallel_5m.pth
+  --prioritized_replay \
+  --n_step 3 \
+  --output dqn_3step_5m.pth
 ```
 
 Boolean options such as `--prioritized_replay` are flags: use the option by itself, without `True` or `False`.
+
+This command starts a clean run. To continue an existing training checkpoint,
+add `--resume path/to/checkpoint.pth` explicitly.
 
 ## Notes
 

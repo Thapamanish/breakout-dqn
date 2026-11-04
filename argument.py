@@ -25,8 +25,8 @@ def add_arguments(parser):
     parser.add_argument('--checkpoint_interval', type=int, default=100)
     parser.add_argument('--eval_episodes', type=int, default=100,
                         help='Number of five-life evaluation episodes')
-    parser.add_argument('--escape_stagnation_steps', type=int, default=1200,
-                        help='Evaluation steps without positive reward before a paddle sweep')
+    parser.add_argument('--escape_stagnation_steps', type=int, default=0,
+                        help='Disabled by default; positive values enable an evaluation paddle sweep')
     parser.add_argument('--escape_cooldown_steps', type=int, default=600,
                         help='Minimum steps between evaluation escape maneuvers')
     return parser

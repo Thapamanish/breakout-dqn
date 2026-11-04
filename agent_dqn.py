@@ -59,9 +59,10 @@ class Agent_DQN(Agent):
         # Evaluation-only fallback for the sparse endgame.  The learned policy
         # remains in control normally; this is activated only after a long
         # interval without a positive reward.
-        self.escape_stagnation_steps = int(getattr(args, 'escape_stagnation_steps', 1200))
+        self.escape_stagnation_steps = int(getattr(args, 'escape_stagnation_steps', 0))
         self.escape_cooldown_steps = int(getattr(args, 'escape_cooldown_steps', 600))
-        self._escape_enabled = bool(getattr(args, 'test_dqn', False))
+        self._escape_enabled = (bool(getattr(args, 'test_dqn', False)) and
+                                self.escape_stagnation_steps > 0)
         self._reset_escape_state()
 
         if args.test_dqn or args.train_dqn_again:
