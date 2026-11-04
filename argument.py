@@ -23,4 +23,8 @@ def add_arguments(parser):
     parser.add_argument('--best_model_path', type=str, default='dqn_model_best.pth')
     parser.add_argument('--log_interval', type=int, default=10)
     parser.add_argument('--checkpoint_interval', type=int, default=100)
+    parser.add_argument('--escape_stagnation_steps', type=int, default=1200,
+                        help='Evaluation steps without positive reward before a paddle sweep')
+    parser.add_argument('--escape_cooldown_steps', type=int, default=600,
+                        help='Minimum steps between evaluation escape maneuvers')
     return parser

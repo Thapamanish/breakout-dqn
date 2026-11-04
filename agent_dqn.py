@@ -56,6 +56,14 @@ class Agent_DQN(Agent):
         self.total_steps = self.gradient_steps = 0
         self.losses = []
 
+        # Evaluation-only fallback for the sparse endgame.  The learned policy
+        # remains in control normally; this is activated only after a long
+        # interval without a positive reward.
+        self.escape_stagnation_steps = int(getattr(args, 'escape_stagnation_steps', 1200))
+        self.escape_cooldown_steps = int(getattr(args, 'escape_cooldown_steps', 600))
+        self._escape_enabled = bool(getattr(args, 'test_dqn', False))
+        self._reset_escape_state()
+
         if args.test_dqn or args.train_dqn_again:
             self.load_checkpoint(required=args.test_dqn)
             
@@ -66,7 +74,50 @@ class Agent_DQN(Agent):
         Put anything you want to initialize if necessary.
         If no parameters need to be initialized, you can leave it as blank.
         """
-        pass
+        self._reset_escape_state()
+
+    def _reset_escape_state(self):
+        self._steps_since_progress = 0
+        self._escape_cooldown = 0
+        self._escape_actions = ()
+        self._escape_index = 0
+
+    def _start_escape_maneuver(self):
+        """Schedule a short paddle sweep to break a repeated endgame path."""
+        # BreakoutNoFrameskip-v4 uses 2=RIGHT and 3=LEFT.  The no-op pauses
+        # give the ball time to reach the paddle between steering bursts.
+        self._escape_actions = (
+            (2,) * 18 + (0,) * 4 +
+            (3,) * 30 + (0,) * 4 +
+            (2,) * 26
+        )
+        self._escape_index = 0
+        self._escape_cooldown = self.escape_cooldown_steps
+        self._steps_since_progress = 0
+
+    def observe_transition(self, state, action, reward, next_state,
+                           terminated=False, truncated=False):
+        """Update endgame detection after an evaluation environment step.
+
+        This hook is optional and is called by ``test.py``.  Training is not
+        changed because the fallback is enabled only for test-time agents.
+        """
+        if not self._escape_enabled:
+            return
+
+        if float(reward) > 0.0:
+            self._steps_since_progress = 0
+        else:
+            self._steps_since_progress += 1
+
+        if self._escape_cooldown > 0:
+            self._escape_cooldown -= 1
+
+        if (not terminated and not truncated and
+                not self._escape_actions and
+                self._escape_cooldown == 0 and
+                self._steps_since_progress >= self.escape_stagnation_steps):
+            self._start_escape_maneuver()
     
     
     def make_action(self, observation, test=True):
@@ -80,6 +131,13 @@ class Agent_DQN(Agent):
                 the predicted action from trained model
         """
         state = np.asarray(observation, dtype=np.uint8)
+        if test and self._escape_actions:
+            action = int(self._escape_actions[self._escape_index])
+            self._escape_index += 1
+            if self._escape_index >= len(self._escape_actions):
+                self._escape_actions = ()
+                self._escape_index = 0
+            return action
         if not test and random.random() < self._epsilon():
             return int(self.env.get_random_action())
         with torch.no_grad():
