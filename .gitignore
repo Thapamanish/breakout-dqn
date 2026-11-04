@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Training outputs and large checkpoints
+*.pth
+*.pt
+nohup.out
+per_training.log
+test_videos/
+final_video/
+
+# Local experiment artifacts
+*.log
+

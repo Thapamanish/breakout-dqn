@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+
+import random
+import os
+from collections import deque
+import numpy as np
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
+
+from agent import Agent
+from dqn_model import DQN
+
+SEED = 595
+
+"""Double-DQN agent for the CS654 Breakout project."""
+
+torch.manual_seed(595)
+np.random.seed(595)
+random.seed(595)
+
+
+class Agent_DQN(Agent):
+    def __init__(self, env, args):
+        """
+        Initialize everything you need here.
+        For example: 
+            paramters for neural network  
+            initialize Q net and target Q net
+            parameters for repaly buffer
+            parameters for q-learning; decaying epsilon-greedy
+            ...
+        """
+
+        super(Agent_DQN, self).__init__(env)
+        self.args = args
+        self.device = torch.device("cuda" if torch.cuda.is_available() else
+                                   ("mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu"))
+        self.num_actions = int(env.get_action_space().n)
+        self.gamma = args.gamma
+        self.batch_size = args.batch_size
+        self.learning_starts = args.learning_starts
+        self.train_frequency = args.train_frequency
+        self.target_update_frequency = args.target_update_frequency
+        self.epsilon_start, self.epsilon_end = args.epsilon_start, args.epsilon_end
+        self.epsilon_decay_steps = args.epsilon_decay_steps
+        self.model_path = args.model_path
+        self.online_net = DQN(4, self.num_actions).to(self.device)
+        self.target_net = DQN(4, self.num_actions).to(self.device)
+        self.target_net.load_state_dict(self.online_net.state_dict())
+        self.target_net.eval()
+        self.optimizer = optim.Adam(self.online_net.parameters(), lr=args.learning_rate, eps=1.5e-4)
+        self.memory = deque(maxlen=args.replay_capacity)
+        self.total_steps = self.gradient_steps = 0
+        self.losses = []
+
+        if args.test_dqn or args.train_dqn_again:
+            self.load_checkpoint(required=args.test_dqn)
+            
+
+    def init_game_setting(self):
+        """
+        Testing function will call this function at the begining of new game
+        Put anything you want to initialize if necessary.
+        If no parameters need to be initialized, you can leave it as blank.
+        """
+        pass
+    
+    
+    def make_action(self, observation, test=True):
+        """
+        Return predicted action of your agent
+        Input:
+            observation: np.array
+                stack 4 last preprocessed frames, shape: (84, 84, 4)
+        Return:
+            action: int
+                the predicted action from trained model
+        """
+        state = np.asarray(observation, dtype=np.uint8)
+        if not test and random.random() < self._epsilon():
+            return int(self.env.get_random_action())
+        with torch.no_grad():
+            tensor = torch.as_tensor(state, device=self.device).permute(2, 0, 1).unsqueeze(0)
+            return int(self.online_net(tensor).argmax(1).item())
+    
+    def push(self, state, action, reward, next_state, done):
+        """ You can add additional arguments as you need. 
+        Push new data to buffer and remove the old one if the buffer is full.
+        
+        Hints:
+        -----
+            you can consider deque(maxlen = 10000) list
+        """
+        self.memory.append((np.asarray(state, dtype=np.uint8).copy(), int(action), float(reward),
+                            np.asarray(next_state, dtype=np.uint8).copy(), bool(done)))
+        
+    def replay_buffer(self):
+        """ You can add additional arguments as you need.
+        Select batch from buffer.
+        """
+        batch = random.sample(self.memory, self.batch_size)
+        states, actions, rewards, next_states, dones = zip(*batch)
+        states = torch.as_tensor(np.stack(states), device=self.device).permute(0, 3, 1, 2)
+        next_states = torch.as_tensor(np.stack(next_states), device=self.device).permute(0, 3, 1, 2)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=self.device).unsqueeze(1)
+        rewards = torch.as_tensor(rewards, dtype=torch.float32, device=self.device)
+        dones = torch.as_tensor(dones, dtype=torch.float32, device=self.device)
+        return states, actions, rewards, next_states, dones
+        
+
+    def learn(self):
+        """
+        Implement your training algorithm here
+        """
+        if len(self.memory) < max(self.batch_size, self.learning_starts):
+            return None
+        states, actions, rewards, next_states, dones = self.replay_buffer()
+        current_q = self.online_net(states).gather(1, actions).squeeze(1)
+        with torch.no_grad():
+            next_actions = self.online_net(next_states).argmax(1, keepdim=True)
+            next_q = self.target_net(next_states).gather(1, next_actions).squeeze(1)
+            target_q = rewards + self.gamma * next_q * (1.0 - dones)
+        loss = F.smooth_l1_loss(current_q, target_q)
+        self.optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.online_net.parameters(), 10.0)
+        self.optimizer.step()
+        self.gradient_steps += 1
+        if self.gradient_steps % self.target_update_frequency == 0:
+            self.target_net.load_state_dict(self.online_net.state_dict())
+        self.losses.append(float(loss.item()))
+        return float(loss.item())
+
+    def _epsilon(self):
+        fraction = min(1.0, self.total_steps / float(self.epsilon_decay_steps))
+        return self.epsilon_start + fraction * (self.epsilon_end - self.epsilon_start)
+
+    def save_checkpoint(self, path=None):
+        path = path or self.model_path
+        torch.save({'online_net': self.online_net.state_dict(), 'target_net': self.target_net.state_dict(),
+                    'optimizer': self.optimizer.state_dict(), 'total_steps': self.total_steps,
+                    'gradient_steps': self.gradient_steps, 'config': vars(self.args)}, path)
+
+    def load_checkpoint(self, required=False):
+        path = next((p for p in (self.model_path, 'dqn_model.pth', 'model.pth') if p and os.path.exists(p)), None)
+        if path is None:
+            if required:
+                raise FileNotFoundError('No trained model found. Train first or pass --model_path.')
+            return
+        checkpoint = torch.load(path, map_location=self.device)
+        online = checkpoint.get('online_net', checkpoint) if isinstance(checkpoint, dict) else checkpoint
+        self.online_net.load_state_dict(online)
+        self.target_net.load_state_dict(checkpoint.get('target_net', online) if isinstance(checkpoint, dict) else online)
+        if isinstance(checkpoint, dict) and 'optimizer' in checkpoint:
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+        self.total_steps = int(checkpoint.get('total_steps', 0)) if isinstance(checkpoint, dict) else 0
+        self.gradient_steps = int(checkpoint.get('gradient_steps', 0)) if isinstance(checkpoint, dict) else 0
+        print(f'Loaded trained model from {path} on {self.device}')
+
+    def train(self):
+        rewards = deque(maxlen=100)
+        state, episode_reward, episode = self.env.reset(seed=SEED), 0.0, 0
+        best_mean = -float('inf')
+        while episode < self.args.episodes and self.total_steps < self.args.max_steps:
+            action = self.make_action(state, test=False)
+            next_state, reward, terminated, truncated, _ = self.env.step(action)
+            done = bool(terminated or truncated)
+            self.push(state, action, reward, next_state, done)
+            self.total_steps += 1
+            episode_reward += reward
+            if self.total_steps >= self.learning_starts and self.total_steps % self.train_frequency == 0:
+                self.learn()
+            state = self.env.reset() if done else next_state
+            if done:
+                episode += 1
+                rewards.append(episode_reward)
+                mean = float(np.mean(rewards))
+                # Do not call the first few exploratory episodes the "best"
+                # checkpoint; wait until the rolling window is meaningful.
+                if len(rewards) >= 100 and mean > best_mean:
+                    best_mean = mean
+                    self.save_checkpoint(self.args.best_model_path)
+                if episode == 1 or episode % self.args.log_interval == 0:
+                    print(f'Episode {episode:5d}/{self.args.episodes} | steps {self.total_steps:8d} | '
+                          f'100-episode mean {mean:7.2f} | eps {self._epsilon():.3f}')
+                if episode % self.args.checkpoint_interval == 0:
+                    self.save_checkpoint(self.model_path)
+                episode_reward = 0.0
+        self.save_checkpoint(self.model_path)
+        self.env.close()
+        print(f'Training complete: {episode} episodes, {self.total_steps} steps, best mean {best_mean:.2f}')

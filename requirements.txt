@@ -1,0 +1,6 @@
+opencv-python-headless
+gymnasium[atari]
+autorom[accept-rom-license]
+ray[rllib]
+ipywidgets
+tqdm
