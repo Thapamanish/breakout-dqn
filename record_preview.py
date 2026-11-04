@@ -8,6 +8,8 @@ from argument import add_arguments
 from environment import Environment
 from agent_dqn import Agent_DQN
 
+EVAL_SEED = 11037
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--video_folder', default='test_videos')
@@ -22,6 +24,7 @@ os.makedirs(args.video_folder, exist_ok=True)
 env = Environment('BreakoutNoFrameskip-v4', args, atari_wrapper=True,
                   test=True, render_mode='rgb_array')
 agent = Agent_DQN(env, args)
+env.reset(seed=EVAL_SEED)
 
 total_reward = 0.0
 video_path = os.path.join(args.video_folder, 'breakout_combined.mp4')
