@@ -47,3 +47,10 @@ course evaluator. Retain the highest-scoring model, not merely the final one.
 Use the same 100-episode evaluator and the same five-life setup for every
 leaderboard comparison. Twenty-episode runs are diagnostics only; they do not
 replace the official result.
+
+### P1a — runtime smoke test
+
+Completed successfully on CUDA with two workers: `rainbow_train.py` reached
+25K steps, produced finite C51 losses (3.9322 at 20K and 3.0744 at 25K), and
+saved both numbered and rolling checkpoints. This confirms that the NoisyNet,
+C51 projection, prioritized replay, and vector Atari pipeline execute together.

@@ -88,6 +88,18 @@ python3 rainbow_train.py \
   --output rainbow_c51_noisy_5m.pth
 ```
 
+If the Jupyter server restarts, resume from the most recent numbered
+checkpoint. The replay buffer is rebuilt with 20K new transitions before the
+next gradient update:
+
+```bash
+python3 rainbow_train.py \
+  --workers 2 \
+  --max_steps 5000000 \
+  --resume rainbow_c51_noisy_2500k.pth \
+  --output rainbow_c51_noisy_5m.pth
+```
+
 Evaluate any resulting checkpoint with the normal course entry point:
 
 ```bash

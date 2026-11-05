@@ -57,6 +57,8 @@ def parse_args():
     parser.add_argument('--workers', type=int, default=2)
     parser.add_argument('--max_steps', type=int, default=5_000_000)
     parser.add_argument('--output', default='rainbow_c51_noisy_5m.pth')
+    parser.add_argument('--resume', default='',
+                        help='Checkpoint to resume after an interrupted run')
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--replay_capacity', type=int, default=100_000)
     parser.add_argument('--learning_starts', type=int, default=20_000)
@@ -120,6 +122,8 @@ def main():
     args = parse_args()
     if args.num_atoms < 2 or args.v_min >= args.v_max:
         raise ValueError('Use at least two atoms and require v_min < v_max')
+    if args.resume and not os.path.exists(args.resume):
+        raise FileNotFoundError(f'Resume checkpoint not found: {args.resume}')
     random.seed(595)
     np.random.seed(595)
     torch.manual_seed(595)
@@ -129,13 +133,24 @@ def main():
     online = RainbowDQN(4, 4, args.num_atoms, args.v_min, args.v_max).to(device)
     target = RainbowDQN(4, 4, args.num_atoms, args.v_min, args.v_max).to(device)
     target.load_state_dict(online.state_dict())
+    optimizer = optim.Adam(online.parameters(), lr=args.learning_rate, eps=1.5e-4)
+    steps = gradients = 0
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location=device)
+        if checkpoint.get('algorithm') != 'rainbow_lite_c51_noisy':
+            raise ValueError(f'{args.resume} is not a Rainbow-lite checkpoint')
+        online.load_state_dict(checkpoint['online_net'])
+        target.load_state_dict(checkpoint['target_net'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        steps = int(checkpoint['total_steps'])
+        gradients = int(checkpoint['gradient_steps'])
+        print(f'Resumed {args.resume} at {steps} environment steps')
     online.train()
     target.train()
-    optimizer = optim.Adam(online.parameters(), lr=args.learning_rate, eps=1.5e-4)
     replay = PrioritizedReplayBuffer(args.replay_capacity, args.per_alpha)
     env = gym.vector.AsyncVectorEnv([make_env for _ in range(args.workers)], shared_memory=False)
     states, _ = env.reset(seed=595)
-    steps = gradients = last_save = 0
+    last_save = steps
 
     while steps < args.max_steps:
         online.reset_noise()
@@ -152,9 +167,10 @@ def main():
         states = next_states
         steps += args.workers
 
-        if steps < args.learning_starts or steps % args.train_frequency >= args.workers:
-            continue
-        if len(replay) < args.batch_size:
+        # Replay is intentionally not serialized. After a resume, rebuild a
+        # diverse warm-up buffer before applying further gradient updates.
+        if (steps < args.learning_starts or len(replay) < args.learning_starts or
+                steps % args.train_frequency >= args.workers):
             continue
 
         beta_fraction = min(1.0, steps / float(args.per_beta_steps))
