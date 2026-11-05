@@ -36,14 +36,9 @@ def test(agent, env, total_episodes=100, record_video=False):
 
             # playing one game (1 life)
             while not terminated and not truncated:
-                previous_state = state
                 action = agent.make_action(state, test=True)
                 state, reward, terminated, truncated, info = env.step(action)
                 episode_reward += reward
-                observe = getattr(agent, 'observe_transition', None)
-                if observe is not None:
-                    observe(previous_state, action, reward, state,
-                            terminated, truncated)
 
 
             if truncated:
