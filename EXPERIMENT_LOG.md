@@ -28,19 +28,7 @@ run. The reproducible learned baseline is `safe_gpu0_final.pth` in E3.
 
 ## Next experiment plan
 
-### P0 — submission baseline (must do first)
-
-Run the unmodified course evaluator for 100 episodes with
-`safe_gpu0_final.pth`, save the terminal screenshot, and record its mean in
-this table. This is the submission-safe result.
-
-```bash
-cd ~/RL/breakout-dqn
-git pull --rebase origin main
-python3 main.py --test_dqn --model_path ~/RL/Project3_new/safe_gpu0_final.pth
-```
-
-### P1 — Rainbow-lite candidate (only after P0)
+### P1 — Rainbow-lite leaderboard candidate
 
 Implement and train one new candidate entirely through the allowed
 `agent_dqn.py` and `dqn_model.py` files. Keep the working Nature-DQN CNN,
@@ -49,12 +37,13 @@ prioritized replay. Add NoisyNet exploration and C51 distributional value
 learning. Do **not** include 3-step returns in the first version because E4
 and E5 rejected that component under our current setup.
 
-Train for up to 5M steps, preserve checkpoints every 250K steps, and evaluate
-each candidate with the unchanged 100-episode course evaluator. Retain a
-checkpoint only when its official mean is greater than P0's mean.
+First run a 25K-step smoke test in Jupyter to verify the C51 loss and CUDA
+environment. Then train for up to 5M steps, preserve checkpoints every 250K
+steps, and evaluate every promising checkpoint with the unchanged 100-episode
+course evaluator. Retain the highest-scoring model, not merely the final one.
 
 ### Evaluation rule
 
 Use the same 100-episode evaluator and the same five-life setup for every
-submission comparison. Twenty-episode runs are diagnostics only; they do not
+leaderboard comparison. Twenty-episode runs are diagnostics only; they do not
 replace the official result.

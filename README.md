@@ -74,6 +74,26 @@ python3 parallel_train.py \
   --output safe_gpu0_3step_finetune_1m.pth
 ```
 
+## Run the Rainbow-lite leaderboard experiment
+
+The Rainbow-lite trainer uses the existing Nature-DQN CNN with a dueling C51
+distributional head, Double-DQN action selection, prioritized replay, and
+NoisyNet exploration. It saves a rolling checkpoint and a separate checkpoint
+every 250K environment steps.
+
+```bash
+python3 rainbow_train.py \
+  --workers 2 \
+  --max_steps 5000000 \
+  --output rainbow_c51_noisy_5m.pth
+```
+
+Evaluate any resulting checkpoint with the normal course entry point:
+
+```bash
+python3 main.py --test_dqn --model_path rainbow_c51_noisy_5m.pth
+```
+
 ## Notes
 
 The Atari environment is `BreakoutNoFrameskip-v4`. Training uses clipped rewards and evaluation uses the saved checkpoint specified by `--model_path`.

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from agent import Agent
-from dqn_model import DQN
+from dqn_model import DQN, RainbowDQN
 
 SEED = 595
 
@@ -47,10 +47,8 @@ class Agent_DQN(Agent):
         self.epsilon_start, self.epsilon_end = args.epsilon_start, args.epsilon_end
         self.epsilon_decay_steps = args.epsilon_decay_steps
         self.model_path = args.model_path
-        self.online_net = DQN(4, self.num_actions).to(self.device)
-        self.target_net = DQN(4, self.num_actions).to(self.device)
-        self.target_net.load_state_dict(self.online_net.state_dict())
-        self.target_net.eval()
+        self.is_rainbow = False
+        self._build_networks(rainbow=False)
         self.optimizer = optim.Adam(self.online_net.parameters(), lr=args.learning_rate, eps=1.5e-4)
         self.memory = deque(maxlen=args.replay_capacity)
         self.total_steps = self.gradient_steps = 0
@@ -67,6 +65,15 @@ class Agent_DQN(Agent):
 
         if args.test_dqn or args.train_dqn_again:
             self.load_checkpoint(required=args.test_dqn)
+
+    def _build_networks(self, rainbow):
+        """Create either the legacy DQN or the C51/NoisyNet evaluation model."""
+        network_type = RainbowDQN if rainbow else DQN
+        self.online_net = network_type(4, self.num_actions).to(self.device)
+        self.target_net = network_type(4, self.num_actions).to(self.device)
+        self.target_net.load_state_dict(self.online_net.state_dict())
+        self.target_net.eval()
+        self.is_rainbow = bool(rainbow)
             
 
     def init_game_setting(self):
@@ -210,6 +217,12 @@ class Agent_DQN(Agent):
                 raise FileNotFoundError('No trained model found. Train first or pass --model_path.')
             return
         checkpoint = torch.load(path, map_location=self.device)
+        is_rainbow = (isinstance(checkpoint, dict) and
+                      checkpoint.get('algorithm') == 'rainbow_lite_c51_noisy')
+        if is_rainbow and not self.is_rainbow:
+            self._build_networks(rainbow=True)
+            self.optimizer = optim.Adam(self.online_net.parameters(),
+                                        lr=self.args.learning_rate, eps=1.5e-4)
         online = checkpoint.get('online_net', checkpoint) if isinstance(checkpoint, dict) else checkpoint
         self.online_net.load_state_dict(online)
         self.target_net.load_state_dict(checkpoint.get('target_net', online) if isinstance(checkpoint, dict) else online)
