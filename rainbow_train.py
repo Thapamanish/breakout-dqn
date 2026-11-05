@@ -18,6 +18,7 @@ import torch.optim as optim
 
 from atari_wrapper import make_wrap_atari
 from dqn_model import RainbowDQN
+from rainbow_utils import NStepAccumulator
 
 
 class PrioritizedReplayBuffer:
@@ -67,6 +68,8 @@ def parse_args():
                         help='Gradient updates between target-network copies')
     parser.add_argument('--learning_rate', type=float, default=6.25e-5)
     parser.add_argument('--gamma', type=float, default=0.99)
+    parser.add_argument('--n_step', type=int, default=1,
+                        help='Discounted-return horizon; use 1 for the baseline')
     parser.add_argument('--num_atoms', type=int, default=51)
     parser.add_argument('--v_min', type=float, default=-10.0)
     parser.add_argument('--v_max', type=float, default=10.0)
@@ -102,11 +105,12 @@ def save_checkpoint(path, online, target, optimizer, steps, gradients, args):
     }, path)
 
 
-def project_distribution(next_distribution, rewards, dones, support, gamma, v_min, v_max):
+def project_distribution(next_distribution, rewards, dones, support, discounts, v_min, v_max):
     """Project a Bellman-updated categorical distribution onto fixed C51 atoms."""
     batch_size, num_atoms = next_distribution.shape
     delta_z = (v_max - v_min) / (num_atoms - 1)
-    target_atoms = rewards.unsqueeze(1) + gamma * (1.0 - dones.unsqueeze(1)) * support.unsqueeze(0)
+    target_atoms = (rewards.unsqueeze(1) + discounts.unsqueeze(1) *
+                    (1.0 - dones.unsqueeze(1)) * support.unsqueeze(0))
     target_atoms = target_atoms.clamp(v_min, v_max)
     positions = (target_atoms - v_min) / delta_z
     lower = positions.floor().long()
@@ -122,13 +126,16 @@ def main():
     args = parse_args()
     if args.num_atoms < 2 or args.v_min >= args.v_max:
         raise ValueError('Use at least two atoms and require v_min < v_max')
+    if args.n_step < 1:
+        raise ValueError('--n_step must be at least one')
     if args.resume and not os.path.exists(args.resume):
         raise FileNotFoundError(f'Resume checkpoint not found: {args.resume}')
     random.seed(595)
     np.random.seed(595)
     torch.manual_seed(595)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f'Rainbow-lite on {device}; workers={args.workers}; C51 atoms={args.num_atoms}')
+    print(f'Rainbow-lite on {device}; workers={args.workers}; C51 atoms={args.num_atoms}; '
+          f'n-step={args.n_step}; target updates={args.target_update_frequency}')
 
     online = RainbowDQN(4, 4, args.num_atoms, args.v_min, args.v_max).to(device)
     target = RainbowDQN(4, 4, args.num_atoms, args.v_min, args.v_max).to(device)
@@ -148,6 +155,7 @@ def main():
     online.train()
     target.train()
     replay = PrioritizedReplayBuffer(args.replay_capacity, args.per_alpha)
+    accumulators = [NStepAccumulator(args.n_step, args.gamma) for _ in range(args.workers)]
     env = gym.vector.AsyncVectorEnv([make_env for _ in range(args.workers)], shared_memory=False)
     states, _ = env.reset(seed=595)
     last_save = steps
@@ -162,8 +170,11 @@ def main():
             successor = next_states[index]
             if done and infos.get('_final_observation', np.zeros(args.workers, dtype=bool))[index]:
                 successor = infos['final_observation'][index]
-            replay.append((states[index].copy(), int(actions[index]), float(rewards[index]),
-                           np.asarray(successor).copy(), done))
+            samples = accumulators[index].append(
+                states[index].copy(), int(actions[index]), float(rewards[index]),
+                np.asarray(successor).copy(), done)
+            for sample in samples:
+                replay.append(sample)
         states = next_states
         steps += args.workers
 
@@ -176,12 +187,13 @@ def main():
         beta_fraction = min(1.0, steps / float(args.per_beta_steps))
         beta = args.per_beta_start + beta_fraction * (1.0 - args.per_beta_start)
         batch, indices, weights = replay.sample(args.batch_size, beta)
-        state_batch, actions_batch, rewards_batch, next_state_batch, done_batch = zip(*batch)
+        state_batch, actions_batch, rewards_batch, next_state_batch, done_batch, horizons = zip(*batch)
         state_batch = states_to_tensor(np.stack(state_batch), device)
         next_state_batch = states_to_tensor(np.stack(next_state_batch), device)
         actions_batch = torch.as_tensor(actions_batch, dtype=torch.long, device=device)
         rewards_batch = torch.as_tensor(rewards_batch, dtype=torch.float32, device=device)
         done_batch = torch.as_tensor(done_batch, dtype=torch.float32, device=device)
+        horizons = torch.as_tensor(horizons, dtype=torch.float32, device=device)
         importance_weights = torch.as_tensor(weights, dtype=torch.float32, device=device)
 
         online.reset_noise()
@@ -192,8 +204,9 @@ def main():
             next_actions = online(next_state_batch).argmax(1)
             next_distribution = target.dist(next_state_batch)[
                 torch.arange(args.batch_size, device=device), next_actions]
+            discounts = torch.pow(torch.full_like(horizons, args.gamma), horizons)
             projected = project_distribution(next_distribution, rewards_batch, done_batch,
-                                             online.support, args.gamma, args.v_min, args.v_max)
+                                             online.support, discounts, args.v_min, args.v_max)
         per_sample_loss = -(projected * chosen_distribution.clamp_min(1e-6).log()).sum(1)
         loss = (importance_weights * per_sample_loss).mean()
         optimizer.zero_grad(set_to_none=True)

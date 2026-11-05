@@ -54,3 +54,18 @@ Completed successfully on CUDA with two workers: `rainbow_train.py` reached
 25K steps, produced finite C51 losses (3.9322 at 20K and 3.0744 at 25K), and
 saved both numbered and rolling checkpoints. This confirms that the NoisyNet,
 C51 projection, prioritized replay, and vector Atari pipeline execute together.
+
+### P2 — controlled propagation experiments
+
+The next experiments isolate two plausible credit-assignment mechanisms from
+the 5M Rainbow baseline:
+
+| Arm | Only changed setting | Duration | Decision criterion |
+| --- | --- | --- | --- |
+| P2-A | `n_step=3` rather than `n_step=1` | 1.5M steps | At least 50 mean above the matched 1-step checkpoint at two consecutive comparisons, without increasing the rate of scores below 100. |
+| P2-B | Target update every 2,000 gradients rather than 8,000 | 1.5M steps | Same criterion, evaluated independently. |
+
+`rainbow_utils.NStepAccumulator` is unit-tested for full windows, terminal
+flushes, and independent worker trajectories. The C51 projection uses
+`gamma ** horizon`, masks bootstrapping at terminal/life-loss transitions, and
+stores the state reached after the full n-step window.

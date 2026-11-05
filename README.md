@@ -106,6 +106,18 @@ Evaluate any resulting checkpoint with the normal course entry point:
 python3 main.py --test_dqn --model_path rainbow_c51_noisy_5m.pth
 ```
 
+For the controlled n-step experiment, change only the return horizon and use
+a distinct output name. The n-step accumulator has dependency-free tests:
+
+```bash
+python3 tests/test_nstep.py
+python3 rainbow_train.py \
+  --workers 2 \
+  --max_steps 1500000 \
+  --n_step 3 \
+  --output rainbow_n3_1500k.pth
+```
+
 ## Notes
 
 The Atari environment is `BreakoutNoFrameskip-v4`. Training uses clipped rewards and evaluation uses the saved checkpoint specified by `--model_path`.
