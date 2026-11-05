@@ -107,7 +107,9 @@ def parse_args():
                    help='Number of visible GPUs to use (default: 1)')
     p.add_argument('--max_steps', type=int, default=5_000_000)
     p.add_argument('--resume', default='',
-                   help='Optional checkpoint to continue; omit for a clean run')
+                   help='Optional checkpoint to continue or fine-tune from')
+    p.add_argument('--fresh_finetune', action='store_true',
+                   help='Load only network weights; reset optimizer, replay, and step schedule')
     p.add_argument('--output', default='dqn_3step_5m.pth')
     p.add_argument('--batch_size', type=int, default=64)
     p.add_argument('--replay_capacity', type=int, default=100_000)
@@ -118,6 +120,8 @@ def parse_args():
     p.add_argument('--gamma', type=float, default=0.99)
     p.add_argument('--n_step', type=int, default=3,
                    help='Number of discounted rewards per replay target')
+    p.add_argument('--epsilon_start', type=float, default=1.0)
+    p.add_argument('--epsilon_end', type=float, default=0.01)
     p.add_argument('--epsilon_decay_steps', type=int, default=1_000_000)
     p.add_argument('--prioritized_replay', action='store_true',
                    help='Use proportional prioritized experience replay')
@@ -149,6 +153,12 @@ def main():
     args = parse_args()
     if args.n_step < 1:
         raise ValueError('--n_step must be at least 1')
+    if not 0.0 <= args.epsilon_end <= args.epsilon_start <= 1.0:
+        raise ValueError('epsilon values must satisfy 0 <= end <= start <= 1')
+    if args.fresh_finetune and not args.resume:
+        raise ValueError('--fresh_finetune requires --resume PATH')
+    if args.resume and not os.path.exists(args.resume):
+        raise FileNotFoundError(f'Resume checkpoint not found: {args.resume}')
     random.seed(595); np.random.seed(595); torch.manual_seed(595)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     visible_gpu_count = torch.cuda.device_count() if device.type == 'cuda' else 0
@@ -163,12 +173,19 @@ def main():
     # below then restores its saved target network when one is available.
     target.load_state_dict(online.state_dict())
     steps = gradients = 0
-    if args.resume and os.path.exists(args.resume):
+    if args.resume:
         c = torch.load(args.resume, map_location=device)
         online.load_state_dict(c.get('online_net', c))
-        target.load_state_dict(c.get('target_net', c.get('online_net', c)))
-        steps = int(c.get('total_steps', 0)); gradients = int(c.get('gradient_steps', 0))
-        print(f'Resumed {args.resume} at {steps} environment steps')
+        if args.fresh_finetune:
+            # n-step targets and a new replay buffer change the learning
+            # regime.  Start target estimates and exploration afresh while
+            # retaining only the policy representation from the baseline.
+            target.load_state_dict(online.state_dict())
+            print(f'Fine-tuning weights from {args.resume} with a fresh replay buffer')
+        else:
+            target.load_state_dict(c.get('target_net', c.get('online_net', c)))
+            steps = int(c.get('total_steps', 0)); gradients = int(c.get('gradient_steps', 0))
+            print(f'Resumed {args.resume} at {steps} environment steps')
 
     if gpu_count > 1:
         ids = list(range(gpu_count))
@@ -177,7 +194,7 @@ def main():
         print(f'DataParallel enabled across CUDA devices {ids}')
     target.eval()
     optimizer = optim.Adam(online.parameters(), lr=args.learning_rate, eps=1.5e-4)
-    if 'c' in locals() and 'optimizer' in c:
+    if not args.fresh_finetune and 'c' in locals() and 'optimizer' in c:
         try: optimizer.load_state_dict(c['optimizer'])
         except ValueError: print('Optimizer state not loaded; using fresh optimizer state')
 
@@ -191,7 +208,7 @@ def main():
     last_save = steps
     while steps < args.max_steps:
         fraction = min(1.0, steps / float(args.epsilon_decay_steps))
-        epsilon = 1.0 - fraction * 0.99
+        epsilon = args.epsilon_start + fraction * (args.epsilon_end - args.epsilon_start)
         with torch.no_grad():
             q = online(state_batch(states, device))
             greedy = q.argmax(1).detach().cpu().numpy()

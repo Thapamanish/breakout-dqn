@@ -54,6 +54,26 @@ Boolean options such as `--prioritized_replay` are flags: use the option by itse
 This command starts a clean run. To continue an existing training checkpoint,
 add `--resume path/to/checkpoint.pth` explicitly.
 
+To test a training improvement from an existing strong model without altering
+it, use a fresh fine-tune. This resets the replay buffer, optimizer, target
+network, and exploration schedule while retaining the model weights:
+
+```bash
+python3 parallel_train.py \
+  --workers 2 \
+  --gpu_count 1 \
+  --max_steps 1000000 \
+  --resume ~/RL/Project3_new/safe_gpu0_final.pth \
+  --fresh_finetune \
+  --prioritized_replay \
+  --n_step 3 \
+  --learning_rate 2.5e-5 \
+  --epsilon_start 0.15 \
+  --epsilon_end 0.02 \
+  --epsilon_decay_steps 500000 \
+  --output safe_gpu0_3step_finetune_1m.pth
+```
+
 ## Notes
 
 The Atari environment is `BreakoutNoFrameskip-v4`. Training uses clipped rewards and evaluation uses the saved checkpoint specified by `--model_path`.
