@@ -1,6 +1,6 @@
 {
   "completed_jobs": [],
-  "current_task": "official 100-ep eval on rainbow_target2k_5m_3500k.pth (GPU None)",
+  "current_task": "idle",
   "last_heartbeat": "2026-11-07T07:06:25Z",
   "started_at": "2026-11-07T06:28:17Z",
   "status": "running"

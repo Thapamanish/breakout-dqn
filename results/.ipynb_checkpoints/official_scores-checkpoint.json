@@ -1,0 +1,37 @@
+{
+  "per_finetune_10m.pth": {
+    "mean": 346.88,
+    "note": "Earlier PER 10M"
+  },
+  "rainbow_c51_noisy_5m.pth": {
+    "mean": 359.5,
+    "note": "5M baseline (target update 8000)"
+  },
+  "rainbow_c51_noisy_5m_1250k.pth": {
+    "mean": 25.28
+  },
+  "rainbow_c51_noisy_5m_1500k.pth": {
+    "mean": 37.58
+  },
+  "rainbow_n3_1500k_1250k.pth": {
+    "mean": 64.27
+  },
+  "rainbow_n3_1500k_1500k.pth": {
+    "mean": 71.96
+  },
+  "rainbow_target2k_1500k_1250k.pth": {
+    "mean": 54.06
+  },
+  "rainbow_target2k_1500k_1500k.pth": {
+    "mean": 147.98
+  },
+  "rainbow_target2k_5m_1750k.pth": {
+    "mean": 176.18
+  },
+  "rainbow_target2k_5m_2000k.pth": {
+    "mean": 217.76
+  },
+  "rainbow_target2k_5m_2500k.pth": {
+    "mean": 277.16
+  }
+}

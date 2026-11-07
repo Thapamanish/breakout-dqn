@@ -33,5 +33,11 @@
   },
   "rainbow_target2k_5m_2500k.pth": {
     "mean": 277.16
+  },
+  "rainbow_target2k_5m_3500k.pth": {
+    "elapsed_sec": 1608.82,
+    "evaluated_at": "2026-11-07T07:33:24Z",
+    "mean": 446.3,
+    "note": "Auto-triggered (proxy 446.30 > 277.16)"
   }
 }

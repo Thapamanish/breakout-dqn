@@ -1,0 +1,256 @@
+Snapshot time: 2026-11-07T07:06:25Z
+
+=== nvidia-smi ===
+Sat Nov  7 07:06:25 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 615.71.09              KMD Version: 615.71.09     CUDA UMD Version: 13.4     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100 80GB PCIe          On  |   00000000:17:00.0 Off |                   On |
+| N/A   64C    P0            122W /  300W |                  N/A   |     N/A      Default |
+|                                         |                        |              Enabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA A100 80GB PCIe          On  |   00000000:65:00.0 Off |                   On |
+| N/A   61C    P0            112W /  300W |                  N/A   |     N/A      Default |
+|                                         |                        |              Enabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA A100 80GB PCIe          On  |   00000000:CA:00.0 Off |                   On |
+| N/A   56C    P0            105W /  300W |                  N/A   |     N/A      Default |
+|                                         |                        |              Enabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA A100 80GB PCIe          On  |   00000000:E3:00.0 Off |                   On |
+| N/A   60C    P0            114W /  300W |                  N/A   |     N/A      Default |
+|                                         |                        |              Enabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| MIG devices:                                                                            |
++------------------+----------------------------------+-----------+-----------------------+
+| GPU  GI  CI  MIG |              Shared Memory-Usage |        Vol|        Shared         |
+|      ID  ID  Dev |                Shared BAR1-Usage | SM     Unc| CE ENC  DEC  OFA  JPG |
+|                  |                                  |        ECC|                       |
+|==================+==================================+===========+=======================|
+|  0   13   0   0  |             751MiB /  9728MiB    | 14      0 |  1   0    0    0    0 |
+|                  |               0MiB /  6132MiB    |           |                       |
++------------------+----------------------------------+-----------+-----------------------+
+|  1   13   0   0  |              37MiB /  9728MiB    | 14      0 |  1   0    0    0    0 |
+|                  |               0MiB /  6132MiB    |           |                       |
++------------------+----------------------------------+-----------+-----------------------+
+|  2   12   0   0  |              37MiB /  9728MiB    | 14      0 |  1   0    0    0    0 |
+|                  |               0MiB /  6132MiB    |           |                       |
++------------------+----------------------------------+-----------+-----------------------+
+|  3   12   0   0  |              37MiB /  9728MiB    | 14      0 |  1   0    0    0    0 |
+|                  |               0MiB /  6132MiB    |           |                       |
++------------------+----------------------------------+-----------+-----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   13    0             3426      C   /opt/conda/bin/python3                  352MiB |
+|    0   13    0             3502      C   /opt/conda/bin/python3                  352MiB |
++-----------------------------------------------------------------------------------------+
+
+=== Running Python Processes ===
+jovyan        82      50  0 03:23 ?        00:00:08 /opt/conda/bin/python3.13 /opt/conda/bin/jupyterhub-singleuser
+jovyan       535     522  0 06:28 pts/1    00:00:00 python3 auto_runner.py
+jovyan      3426       1 99 06:48 pts/1    00:17:37 /opt/conda/bin/python3 main.py --test_dqn --model_path rainbow_target2k_5m_3500k.pth
+jovyan      3502       1 99 06:49 pts/1    00:17:39 /opt/conda/bin/python3 main.py --test_dqn --model_path rainbow_target2k_5m_3500k.pth
+jovyan      3562    3554  0 07:06 pts/2    00:00:00 python3 auto_runner.py
+
+=== Checkpoints (*.pth) ===
+-rw-r--r-- 1 jovyan users  51M Nov  5 03:13 dqn_3step_5m.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 06:28 rainbow_c51_noisy_5m_1000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 06:46 rainbow_c51_noisy_5m_1250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 07:04 rainbow_c51_noisy_5m_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 07:21 rainbow_c51_noisy_5m_1750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 07:39 rainbow_c51_noisy_5m_2000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 07:57 rainbow_c51_noisy_5m_2250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 15:56 rainbow_c51_noisy_5m_2500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 05:34 rainbow_c51_noisy_5m_250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 16:14 rainbow_c51_noisy_5m_2750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 16:32 rainbow_c51_noisy_5m_3000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 16:50 rainbow_c51_noisy_5m_3250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 17:09 rainbow_c51_noisy_5m_3500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 17:27 rainbow_c51_noisy_5m_3750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 17:45 rainbow_c51_noisy_5m_4000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 18:03 rainbow_c51_noisy_5m_4250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 18:21 rainbow_c51_noisy_5m_4500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 18:40 rainbow_c51_noisy_5m_4750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 18:58 rainbow_c51_noisy_5m_5000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 05:52 rainbow_c51_noisy_5m_500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 06:10 rainbow_c51_noisy_5m_750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 18:58 rainbow_c51_noisy_5m.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 00:25 rainbow_n3_1500k_1000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 00:43 rainbow_n3_1500k_1250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 01:01 rainbow_n3_1500k_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 23:32 rainbow_n3_1500k_250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 23:50 rainbow_n3_1500k_500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 00:07 rainbow_n3_1500k_750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 01:01 rainbow_n3_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 23:14 rainbow_n3_smoke_20k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 23:14 rainbow_n3_smoke.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:09 rainbow_n3_t2k_1500k_1000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:27 rainbow_n3_t2k_1500k_1250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:44 rainbow_n3_t2k_1500k_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 17:16 rainbow_n3_t2k_1500k_250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 17:34 rainbow_n3_t2k_1500k_500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 17:51 rainbow_n3_t2k_1500k_750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:44 rainbow_n3_t2k_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 05:10 rainbow_smoke_20k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 05:11 rainbow_smoke_25k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 05:11 rainbow_smoke.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 00:26 rainbow_target2k_1500k_1000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 00:43 rainbow_target2k_1500k_1250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 01:01 rainbow_target2k_1500k_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 23:32 rainbow_target2k_1500k_250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  5 23:50 rainbow_target2k_1500k_500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 00:08 rainbow_target2k_1500k_750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 01:01 rainbow_target2k_1500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 17:16 rainbow_target2k_5m_1750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 17:34 rainbow_target2k_5m_2000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 17:52 rainbow_target2k_5m_2250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:10 rainbow_target2k_5m_2500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:28 rainbow_target2k_5m_2750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 18:46 rainbow_target2k_5m_3000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 19:04 rainbow_target2k_5m_3250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 19:22 rainbow_target2k_5m_3500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 19:40 rainbow_target2k_5m_3750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 19:58 rainbow_target2k_5m_4000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 20:16 rainbow_target2k_5m_4250k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 20:34 rainbow_target2k_5m_4500k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 20:52 rainbow_target2k_5m_4750k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 21:10 rainbow_target2k_5m_5000k.pth
+-rw-r--r-- 1 jovyan users 129M Nov  6 21:10 rainbow_target2k_5m.pth
+-rw-r--r-- 1 jovyan users  51M Nov  5 04:29 safe_gpu0_3step_finetune_1m.pth
+
+=== proxy_curves.txt ===
+== rainbow_c51_noisy_5m_250k
+scores [0.0, 0.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0]
+proxy: 2.40
+== rainbow_c51_noisy_5m_500k
+scores [0.0, 9.0, 9.0, 9.0, 0.0, 0.0, 0.0, 9.0, 0.0]
+proxy: 3.06
+== rainbow_c51_noisy_5m_750k
+scores [0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0]
+proxy: 0.60
+== rainbow_c51_noisy_5m_1000k
+scores [3.0, 7.0, 7.0, 7.0, 3.0, 11.0, 3.0, 7.0, 1.0]
+proxy: 5.40
+== rainbow_c51_noisy_5m_1250k
+scores [23.0, 23.0, 23.0, 23.0, 23.0, 26.0, 23.0, 23.0, 29.0]
+proxy: 25.28
+== rainbow_c51_noisy_5m_1500k
+scores [34.0, 53.0, 53.0, 53.0, 34.0, 21.0, 34.0, 53.0, 33.0]
+proxy: 37.58
+== rainbow_n3_1500k_250k
+scores [11.0, 0.0, 0.0, 0.0, 3.0, 1.0, 3.0, 0.0, 5.0]
+proxy: 2.14
+== rainbow_n3_1500k_500k
+scores [24.0, 30.0, 30.0, 30.0, 24.0, 20.0, 24.0, 30.0, 18.0]
+proxy: 23.56
+== rainbow_n3_1500k_750k
+scores [45.0, 37.0, 37.0, 37.0, 45.0, 44.0, 45.0, 37.0, 26.0]
+proxy: 36.76
+== rainbow_n3_1500k_1000k
+scores [43.0, 61.0, 61.0, 61.0, 36.0, 36.0, 36.0, 61.0, 59.0]
+proxy: 50.94
+== rainbow_n3_1500k_1250k
+scores [45.0, 85.0, 85.0, 85.0, 44.0, 35.0, 44.0, 85.0, 73.0]
+proxy: 64.26
+== rainbow_n3_1500k_1500k
+scores [25.0, 109.0, 109.0, 109.0, 25.0, 47.0, 25.0, 109.0, 75.0]
+proxy: 71.96
+== rainbow_target2k_1500k_250k
+scores [1.0, 9.0, 9.0, 9.0, 1.0, 11.0, 1.0, 9.0, 2.0]
+proxy: 6.00
+== rainbow_target2k_1500k_500k
+scores [14.0, 22.0, 22.0, 22.0, 14.0, 6.0, 14.0, 22.0, 7.0]
+proxy: 13.16
+== rainbow_target2k_1500k_750k
+scores [18.0, 24.0, 24.0, 24.0, 18.0, 19.0, 18.0, 24.0, 19.0]
+proxy: 20.52
+== rainbow_target2k_1500k_1000k
+scores [26.0, 31.0, 31.0, 31.0, 26.0, 35.0, 26.0, 31.0, 50.0]
+proxy: 36.22
+== rainbow_target2k_1500k_1250k
+scores [71.0, 54.0, 54.0, 54.0, 71.0, 60.0, 71.0, 54.0, 39.0]
+proxy: 54.06
+== rainbow_target2k_1500k_1500k
+scores [59.0, 76.0, 76.0, 76.0, 59.0, 62.0, 59.0, 76.0, 354.0]
+proxy: 147.98
+
+
+=== proxy_target2k_remaining.txt ===
+== rainbow_target2k_5m_2750k
+scores [295.0, 73.0, 73.0, 73.0, 295.0, 376.0, 295.0, 73.0, 410.0]
+proxy: 267.92
+== rainbow_target2k_5m_3000k
+scores [0.0, 156.0, 156.0, 156.0, 387.0, 326.0, 387.0, 156.0, 247.0]
+proxy: 257.06
+== rainbow_target2k_5m_3250k
+scores [388.0, 354.0, 354.0, 354.0, 327.0, 0.0, 0.0, 0.0, 0.0]
+proxy: 179.22
+== rainbow_target2k_5m_3500k
+scores [395.0, 590.0, 590.0, 590.0, 395.0, 327.0, 395.0, 590.0, 390.0]
+proxy: 446.30
+== rainbow_target2k_5m_3750k
+scores [319.0, 22.0, 22.0, 22.0, 319.0, 397.0, 319.0, 22.0, 384.0]
+proxy: 251.82
+== rainbow_target2k_5m_4000k
+scores [428.0, 292.0, 292.0, 292.0, 428.0, 359.0, 428.0, 292.0, 335.0]
+proxy: 341.92
+== rainbow_target2k_5m_4250k
+scores [129.0, 44.0, 44.0, 44.0, 129.0, 192.0, 129.0, 44.0, 357.0]
+proxy: 176.54
+== rainbow_target2k_5m_4500k
+scores [330.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+proxy: 0.00
+== rainbow_target2k_5m_4750k
+scores [334.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+proxy: 0.00
+== rainbow_target2k_5m_5000k
+scores [387.0, 154.0, 154.0, 154.0, 387.0, 116.0, 387.0, 154.0, 385.0]
+proxy: 253.02
+
+
+=== logs/n3_t2k_1500k.log (last 60 lines) ===
+nohup: ignoring input
+A.L.E: Arcade Learning Environment (version 0.12.0+0706845)
+[Powered by Stella]
+Rainbow-lite on cuda; workers=2; C51 atoms=51; n-step=3; target updates=2000
+Steps 250000/1500000 | replay 100000 | loss 1.4693 | saved rainbow_n3_t2k_1500k_250k.pth
+Steps 500000/1500000 | replay 100000 | loss 1.8775 | saved rainbow_n3_t2k_1500k_500k.pth
+Steps 750000/1500000 | replay 100000 | loss 1.6915 | saved rainbow_n3_t2k_1500k_750k.pth
+Steps 1000000/1500000 | replay 100000 | loss 2.0778 | saved rainbow_n3_t2k_1500k_1000k.pth
+Steps 1250000/1500000 | replay 100000 | loss 0.7989 | saved rainbow_n3_t2k_1500k_1250k.pth
+Steps 1500000/1500000 | replay 100000 | loss 2.0163 | saved rainbow_n3_t2k_1500k_1500k.pth
+Rainbow-lite complete at 1500000 steps; saved rainbow_n3_t2k_1500k.pth
+
+
+=== logs/target2k_5m.log (last 60 lines) ===
+nohup: ignoring input
+A.L.E: Arcade Learning Environment (version 0.12.0+0706845)
+[Powered by Stella]
+Rainbow-lite on cuda; workers=2; C51 atoms=51; n-step=1; target updates=2000
+Resumed rainbow_target2k_1500k.pth at 1500000 environment steps
+Steps 1750000/5000000 | replay 100000 | loss 1.9904 | saved rainbow_target2k_5m_1750k.pth
+Steps 2000000/5000000 | replay 100000 | loss 2.2089 | saved rainbow_target2k_5m_2000k.pth
+Steps 2250000/5000000 | replay 100000 | loss 2.2627 | saved rainbow_target2k_5m_2250k.pth
+Steps 2500000/5000000 | replay 100000 | loss 2.1471 | saved rainbow_target2k_5m_2500k.pth
+Steps 2750000/5000000 | replay 100000 | loss 2.3946 | saved rainbow_target2k_5m_2750k.pth
+Steps 3000000/5000000 | replay 100000 | loss 1.6716 | saved rainbow_target2k_5m_3000k.pth
+Steps 3250000/5000000 | replay 100000 | loss 2.3371 | saved rainbow_target2k_5m_3250k.pth
+Steps 3500000/5000000 | replay 100000 | loss 2.3947 | saved rainbow_target2k_5m_3500k.pth
+Steps 3750000/5000000 | replay 100000 | loss 2.4136 | saved rainbow_target2k_5m_3750k.pth
+Steps 4000000/5000000 | replay 100000 | loss 2.2790 | saved rainbow_target2k_5m_4000k.pth
+Steps 4250000/5000000 | replay 100000 | loss 1.2707 | saved rainbow_target2k_5m_4250k.pth
+Steps 4500000/5000000 | replay 100000 | loss 2.3297 | saved rainbow_target2k_5m_4500k.pth
+Steps 4750000/5000000 | replay 100000 | loss 2.2909 | saved rainbow_target2k_5m_4750k.pth
+Steps 5000000/5000000 | replay 100000 | loss 2.0341 | saved rainbow_target2k_5m_5000k.pth
+Rainbow-lite complete at 5000000 steps; saved rainbow_target2k_5m.pth
+

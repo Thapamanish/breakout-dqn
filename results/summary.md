@@ -1,13 +1,14 @@
 # Automated Experiment & Evaluation Summary
 
-Last updated: `2026-11-07T07:06:33Z`  
+Last updated: `2026-11-07T07:33:24Z`  
 Runner status: `running`  
-Current task: `official 100-ep eval on rainbow_target2k_5m_3500k.pth (GPU None)`
+Current task: `idle`
 
 ## Official 100-Episode Evaluations
 
 | Checkpoint | Official Mean | Proxy | Notes |
 | --- | ---: | ---: | --- |
+| `rainbow_target2k_5m_3500k.pth` | **446.30** | 446.30 | Auto-triggered (proxy 446.30 > 277.16) |
 | `rainbow_c51_noisy_5m.pth` | **359.50** | - | 5M baseline (target update 8000) |
 | `per_finetune_10m.pth` | **346.88** | - | Earlier PER 10M |
 | `rainbow_target2k_5m_2500k.pth` | **277.16** | 277.16 |  |
