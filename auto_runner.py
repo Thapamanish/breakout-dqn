@@ -262,10 +262,22 @@ def capture_snapshot():
 def git_sync(commit_message):
     """Stage results/, commit if changed, pull --rebase, and push to origin."""
     try:
-        run_cmd(["git", "add", "results/"], timeout=20)
+        run_cmd(["git", "add", "-f", "results/"], timeout=20)
         status = run_cmd(["git", "status", "--porcelain", "results/"], timeout=20)
         if status.stdout.strip():
-            run_cmd(["git", "commit", "-m", commit_message], timeout=30)
+            commit_res = run_cmd(
+                [
+                    "git",
+                    "-c", "user.name=auto-runner",
+                    "-c", "user.email=mthapa2955@sdsu.edu",
+                    "commit",
+                    "-m", commit_message,
+                    "--", "results/",
+                ],
+                timeout=30,
+            )
+            if commit_res.returncode != 0:
+                log(f"git commit warning: {commit_res.stdout}")
         pull_res = run_cmd(["git", "pull", "--rebase", "--autostash", "origin", "main"], timeout=60)
         if pull_res.returncode != 0:
             log(f"git pull warning: {pull_res.stdout}")
@@ -379,9 +391,11 @@ def discover_unscreened_checkpoints(proxies):
     # Priority 2: n3_t2k_1500k arm (250k..1500k)
     for s in [250, 500, 750, 1000, 1250, 1500]:
         ordered.append(f"rainbow_n3_t2k_1500k_{s}k.pth")
-    # Priority 3: any other numbered rainbow checkpoints in repo root
+    # Priority 3: any other numbered rainbow checkpoints in repo root (excluding old baseline/n3 arms)
     for path in sorted(glob.glob(os.path.join(REPO_DIR, "rainbow_*_*k.pth"))):
         name = os.path.basename(path)
+        if name.startswith("rainbow_c51_noisy_5m_") or name.startswith("rainbow_n3_1500k_"):
+            continue
         if name not in ordered:
             ordered.append(name)
 
